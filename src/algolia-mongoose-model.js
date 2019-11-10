@@ -44,7 +44,15 @@ export default function createAlgoliaMongooseModel({
       await this.clearAlgoliaIndex();
 
       const docs = await this.find({ _algoliaObjectID: { $eq: null } });
-      await Promise.all(docs.map(doc => doc.pushToAlgolia()));
+      await Promise.all(docs.map(doc => {
+        const object = pick(doc.toJSON(), attributesToIndex);
+        const { objectID } = await index.addObject(object);
+  
+        doc.collection.update(
+          { _id: doc._id },
+          { $set: { _algoliaObjectID: objectID } }
+        );
+      }));
     }
 
     // * set one or more settings of the algolia index
